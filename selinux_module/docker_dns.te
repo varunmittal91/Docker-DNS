@@ -1,0 +1,14 @@
+
+module docker_dns 1.0;
+
+require {
+	type docker_var_run_t;
+	type svirt_lxc_net_t;
+	type docker_t;
+	class sock_file { write read open };
+	class unix_stream_socket connectto;
+}
+
+#============= svirt_lxc_net_t ==============
+allow svirt_lxc_net_t docker_t:unix_stream_socket connectto;
+allow svirt_lxc_net_t docker_var_run_t:sock_file { read write open };

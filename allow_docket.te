@@ -1,0 +1,2 @@
+allow svirt_lxc_net_t docker_t:unix_stream_socket connectto;
+#allow svirt_lxc_net_t docker_var_run_t:sock_file { write read open };
