@@ -3,6 +3,8 @@ import json
 from time import sleep
 import os
 from subprocess import call
+import getopt
+from sys import argv
 
 container_list = {}
 
@@ -11,7 +13,7 @@ def add_dns(name, hostname, ip):
     file.write("host-record=%s,%s" % (hostname,ip))
     file.close()
 def remove_dns(hostname):
-    print call(["rm", "/etc/dnsmasq.d/0%s" % hostname])
+    call(["rm", "/etc/dnsmasq.d/0%s" % hostname])
 
 file_path = "http+unix://%2Fvar%2Frun%2Fdocker.sock"
 def get_response(api_path):
@@ -43,6 +45,16 @@ def update_dns():
                 container_list[container['Id']] = container_status['Config']['Hostname']
     if dnsmasq_required_restart:
         call(['/bin/restartdns.sh'])
+
+optlist,args = getopt.getopt(argv[1:], '-d:', ['dns='])
+names = ["127.0.0.1"]
+resolve_file = open("/etc/resolv.dnsmasq.conf", "w+")
+for opt,value in optlist:
+    names.extend(value.split(','))
+names.append('8.8.8.8')
+[resolve_file.write("nameserver %s\n" % name) for name in names]
+resolve_file.close()
+
 while 1:
     update_dns()
     sleep(10)
