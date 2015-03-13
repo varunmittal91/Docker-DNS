@@ -25,24 +25,40 @@ def get_response(api_path):
 def update_dns():
     containers = get_response('containers/json?all=1')
     dnsmasq_required_restart = False
+
+    listed_ids = []
+
     for container in containers:
+        listed_ids.append(container['Id'])
+
         is_up = False
         if container['Status'].startswith('Up'):
             is_up = True
         try:
             status = container_list[container['Id']]
-            if not is_up:
-                dnsmasq_required_restart = True
-                remove_dns(status)
-                del container_list[container['Id']]
-                dnsmasq_required_restart = True
+            if is_up:
+                container_status = get_response('containers/%s/json' % container['Id'])
+                if container_status['NetworkSettings']['IPAddress'] != status['ip']:
+                    add_dns(name=container_status['Name'][1:], hostname=container_status['Config']['Hostname'],
+                                ip=container_status['NetworkSettings']['IPAddress'])
+                    status['ip'] = container_status['NetworkSettings']['IPAddress']
+                    dnsmasq_required_restart = True
         except KeyError:
             if is_up:
                 container_status = get_response('containers/%s/json' % container['Id'])
                 add_dns(name=container_status['Name'][1:], hostname=container_status['Config']['Hostname'], 
                             ip=container_status['NetworkSettings']['IPAddress'])
                 dnsmasq_required_restart = True
-                container_list[container['Id']] = container_status['Config']['Hostname']
+                container_list[container['Id']] = {'hostname': container_status['Config']['Hostname'], 
+                                                       'ip': container_status['NetworkSettings']['IPAddress']}
+
+    stopped = set(container_list.keys()) - set(listed_ids)
+    if len(stopped) > 0:
+        dnsmasq_required_restart = True
+        for id in stopped: 
+            remove_dns(container_list[id]['hostname'])
+            del container_list[id]
+
     if dnsmasq_required_restart:
         call(['/bin/restartdns.sh'])
 
@@ -58,3 +74,4 @@ resolve_file.close()
 while 1:
     update_dns()
     sleep(10)
+

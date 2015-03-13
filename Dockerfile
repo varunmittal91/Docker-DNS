@@ -1,7 +1,7 @@
 from debian
 
 MAINTAINER Varun Mittal
-RUN apt-get update && apt-get install python-pip dnsmasq -y
+RUN apt-get update && apt-get install python-pip dnsmasq procps -y
 RUN pip install requests_unixsocket
 
 ADD main.py /bin/main.py
