@@ -106,7 +106,7 @@ if not is_slave:
             else:
                 self._set_headers(500)
             self.wfile.write("")
-        def do_UPDATE(self):
+        def do_PUT(self):
             try:
                 name,hostname,ip = self.path[1:].split('/')[0:3]
                 add_dns(name,hostname,ip)
