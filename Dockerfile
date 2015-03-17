@@ -10,5 +10,6 @@ ADD dnsmasq.conf /etc/dnsmasq.conf
 
 VOLUME ["/var/run/docker.sock"]
 EXPOSE 53/udp
+EXPOSE 538/tcp
 
 ENTRYPOINT ["/usr/bin/python", "/bin/main.py"]
