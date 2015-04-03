@@ -15,7 +15,7 @@
 > 
 > DNS Slave
 >
-> docker run -d -v /var/run/docker.sock:/var/run/docker.sock --name dns_slave varunmittal91/docker-dns --master <MASTER HOST_IP>:538
+> docker run -d -v /var/run/docker.sock:/var/run/docker.sock --name dns_slave varunmittal91/docker-dns --master <MASTER HOST_IP>:538 --docker_api <LOCAL DOCKER API>
 > On host machine 53/udp has to be enabled
 
 

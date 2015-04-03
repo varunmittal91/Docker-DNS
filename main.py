@@ -1,4 +1,3 @@
-import requests_unixsocket
 import json
 from time import sleep
 import os
@@ -26,15 +25,13 @@ def remove_dns(hostname, is_slave=None):
     else:
         return call(["rm", "/etc/dnsmasq.d/0%s" % hostname])
 
-file_path = "http+unix://%2Fvar%2Frun%2Fdocker.sock"
-def get_response(api_path):
-    session = requests_unixsocket.Session()
-    r = session.get("%s/%s" % (file_path, api_path))
+def get_response(docker_api, api_path):
+    r = requests.get("%s/%s" % (docker_api, api_path))
     if r.status_code == 200:
         return json.loads(r.content)
 
-def update_dns(is_slave=None):
-    containers = get_response('containers/json?all=1')
+def update_dns(is_slave=None, docker_api=None):
+    containers = get_response(docker_api, 'containers/json?all=1')
     dnsmasq_required_restart = False
 
     listed_ids = []
@@ -48,7 +45,7 @@ def update_dns(is_slave=None):
         try:
             status = container_list[container['Id']]
             if is_up:
-                container_status = get_response('containers/%s/json' % container['Id'])
+                container_status = get_response(docker_api, 'containers/%s/json' % container['Id'])
                 if container_status['NetworkSettings']['IPAddress'] != status['ip']:
                     add_dns(name=container_status['Name'][1:], hostname=container_status['Config']['Hostname'],
                                 ip=container_status['NetworkSettings']['IPAddress'], is_slave=is_slave)
@@ -56,7 +53,7 @@ def update_dns(is_slave=None):
                     dnsmasq_required_restart = True
         except KeyError:
             if is_up:
-                container_status = get_response('containers/%s/json' % container['Id'])
+                container_status = get_response(docker_api, 'containers/%s/json' % container['Id'])
                 add_dns(name=container_status['Name'][1:], hostname=container_status['Config']['Hostname'], 
                             ip=container_status['NetworkSettings']['IPAddress'], is_slave=is_slave)
                 dnsmasq_required_restart = True
@@ -73,14 +70,17 @@ def update_dns(is_slave=None):
     if not is_slave and dnsmasq_required_restart:
         call(['/bin/restartdns.sh'])
 
-optlist,args = getopt.getopt(argv[1:], '-d:-m:', ['dns=', 'master='])
+optlist,args = getopt.getopt(argv[1:], '-d:-m:', ['dns=', 'master=', 'docker_api='])
 names = ["127.0.0.1"]
 is_slave = False
+docker_api = None
 for opt,value in optlist:
     if opt in ['d', '--dns']:
         names.extend(value.split(','))
     elif opt in ['m', '--master']:
         is_slave = value
+    elif opt in ['--docker_api']:
+        docker_api = value
 if not is_slave:
     resolve_file = open("/etc/resolv.dnsmasq.conf", "w+")
     names.append('8.8.8.8')
@@ -120,5 +120,5 @@ if not is_slave:
     httpd.serve_forever()
 else:
     while 1:
-        update_dns(is_slave)
+        update_dns(is_slave, docker_api)
         sleep(10)
